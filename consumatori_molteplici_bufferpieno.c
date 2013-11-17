@@ -121,7 +121,7 @@ void test_produttorimolteplici_getnonbloccante_bufferpieno(void) {
   pthread_t thread1;
   msg_t* ret_msg_0;
   msg_t* ret_msg_1;
-  //nel buffer non sono presenti messaggi
+  //nel buffer sono presenti messaggi
   CU_ASSERT (NULL != ((buffer->buf)[0]).content);
   //SOLLECITAZIONE: lancio due thread getbloccante per leggere dal buffer
   pthread_create (&thread0, NULL, thread_function_consumatore_nonbloccante_0, NULL);

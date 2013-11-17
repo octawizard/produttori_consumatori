@@ -113,10 +113,7 @@ buffer_t* buffer_init(unsigned int maxsize){
 // deallocazione di un buffer
 void buffer_destroy(buffer_t* buffer){
 	int i = 0;
-	//fare la destroy su ogni messaggio del buffer
-	for (i = 0; i < (buffer->maxsize); i++){
-		msg_destroy_string(&(buffer->buf[i]));
-	}
+	free(buffer->buf);		//dealloco l'array di msg
 	free(buffer);	//dopodichè dealloco il buffer
 	sem_destroy(&vuote);	//distruggi i semafori
 	sem_destroy(&piene);
@@ -133,7 +130,7 @@ void* thread_function_produttore(void* arg){
 		buffer->D = ((buffer->D)+1) % buffer->maxsize;
 	pthread_mutex_unlock(&usoD);
 	sem_post(&piene);
-	return (void*) msg;
+	return msg_copy_string(msg);
 }
 
 msg_t* put_bloccante(buffer_t* buffer, msg_t* msg){
@@ -158,7 +155,7 @@ void* thread_function_produttore_nb(void* arg){
 		buffer->D = ((buffer->D)+1) % buffer->maxsize;
 		pthread_mutex_unlock(&usoD);
 		sem_post(&piene);
-		return msg;
+		return msg_copy_string(msg);
 	}
 	else
 		return BUFFER_ERROR;
@@ -227,9 +224,7 @@ msg_t* get_non_bloccante(buffer_t* buffer){
 }
 //PROBLEMI DA RISOLVERE
 /*
-1) risolvere problema di tipi alle righe 168, 188, ecc
-2) implementare le funzioni buffer_init e buffer_destroy
-3) usare cunit e fare test
+1) buffer_destroy, devo anche cancellare ogni singolo messaggio? mi dava seg fault facendolo, subito dopo che cancello il primo msg
 
 una soluzione può essere allocare la dimensione del buffer come parametro del buffer stesso
 */
