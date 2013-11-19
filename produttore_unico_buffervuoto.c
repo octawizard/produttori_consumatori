@@ -24,19 +24,6 @@ int clean_suite_produttoreunico_buffervuoto(void) {
 
 /************* Test case functions ****************/
 
-/*void test_case_sample(void)
-{
-   CU_ASSERT(CU_TRUE);
-   CU_ASSERT_NOT_EQUAL(2, -1);
-   CU_ASSERT_STRING_EQUAL("string #1", "string #1");
-   CU_ASSERT_STRING_NOT_EQUAL("string #1", "string #2");
-
-   CU_ASSERT(CU_FALSE);
-   CU_ASSERT_EQUAL(2, 3);
-   CU_ASSERT_STRING_NOT_EQUAL("string #1", "string #1");
-   CU_ASSERT_STRING_EQUAL("string #1", "string #2");
-}*/
-
 /* test della suite suite_produttoreunico_buffervuoto_bloccante */
 void test_iniziale_semafori_putbloccante_buffervuoto (void){
   //verifico lo stato del buffer: vuote=1 e piene=0
@@ -47,16 +34,26 @@ void test_iniziale_semafori_putbloccante_buffervuoto (void){
   CU_ASSERT (1 == i);
 }
 
+void* thread_function_produttore_bloccante (void* arg){
+  msg_t* msg = (msg_t*) arg;
+  msg = put_bloccante(buffer, msg);
+  return (void*) msg;
+}
+
 void test_produttoreunico_putbloccante_buffervuoto(void) {
+  pthread_t thread;
+  msg_t* ret_msg;
   //nel buffer non sono presenti messaggi
   CU_ASSERT (NULL == ((buffer->buf)[0]).content);
-  //SOLLECITAZIONE: creo un messaggio da inserire nel buffer e lo inserisco
+  //creo il messaggio da inserire nel buffer
   msg_t* msg = msg_init_string("messaggio 0");
   CU_ASSERT_STRING_EQUAL (((char *)msg->content), "messaggio 0");
-  msg_t* new_msg = put_bloccante(buffer, msg);
+  //SOLLECITAZIONE: creo un messaggio da inserire nel buffer e lo inserisco
+  pthread_create(&thread, NULL, thread_function_produttore_bloccante, msg);
+  pthread_join(thread, (void*)&ret_msg);
   //verifico di aver inserito nel buffer lo stesso messaggio che avevo inzializzato e verifico che sia contenuto nel buffer
-  CU_ASSERT_STRING_EQUAL (((char *)msg->content), ((char *)new_msg->content));
-  CU_ASSERT_STRING_EQUAL ((char *)(buffer->buf[0].content), ((char *)new_msg->content));
+  CU_ASSERT_STRING_EQUAL (((char *)ret_msg->content), ((char *)msg->content));
+  CU_ASSERT_STRING_EQUAL ((char *)(buffer->buf[0].content), ((char *)msg->content));
 }
 
 void test_finale_semafori_putbloccante_buffervuoto (void){
@@ -78,16 +75,27 @@ void test_iniziale_semafori_putnonbloccante_buffervuoto (void){
   CU_ASSERT (1 == i);
 }
 
+
+void* thread_function_produttore_nonbloccante (void* arg){
+  msg_t* msg = (msg_t*) arg;
+  msg = put_non_bloccante(buffer, msg);
+  return (void*) msg;
+}
+
 void test_produttoreunico_putnonbloccante_buffervuoto(void) {
+  pthread_t thread;
+  msg_t* ret_msg;
   //nel buffer non sono presenti messaggi
   CU_ASSERT (NULL == ((buffer->buf)[0]).content);
-  //SOLLECITAZIONE: creo un messaggio da inserire nel buffer e lo inserisco
+  //creo il messaggio da inserire nel buffer
   msg_t* msg = msg_init_string("messaggio 0");
   CU_ASSERT_STRING_EQUAL (((char *)msg->content), "messaggio 0");
-  msg_t* new_msg = put_non_bloccante(buffer, msg);
+  //SOLLECITAZIONE: creo un messaggio da inserire nel buffer e lo inserisco
+  pthread_create(&thread, NULL, thread_function_produttore_nonbloccante, msg);
+  pthread_join(thread, (void*)&ret_msg);
   //verifico di aver inserito nel buffer lo stesso messaggio che avevo inzializzato e verifico che sia contenuto nel buffer
-  CU_ASSERT_STRING_EQUAL (((char *)msg->content), ((char *)new_msg->content));
-  CU_ASSERT_STRING_EQUAL ((char *)(buffer->buf[0].content), ((char *)new_msg->content));
+  CU_ASSERT_STRING_EQUAL (((char *)ret_msg->content), ((char *)msg->content));
+  CU_ASSERT_STRING_EQUAL ((char *)(buffer->buf[0].content), ((char *)msg->content));
 }
 
 void test_finale_semafori_putnonbloccante_buffervuoto (void){
@@ -110,15 +118,15 @@ int main ( void )
       return CU_get_error();
 
    /* add suite_produttoreunico_buffervuoto_bloccante to the registry */
-   suite_produttoreunico_buffervuoto_bloccante = CU_add_suite( "suite_produttoreunico_buffervuoto_bloccante", init_suite_produttoreunico_buffervuoto, clean_suite_produttoreunico_buffervuoto );
+   suite_produttoreunico_buffervuoto_bloccante = CU_add_suite( "Produzione di un messaggio in un buffer unitario vuoto: uso di chiamate bloccanti", init_suite_produttoreunico_buffervuoto, clean_suite_produttoreunico_buffervuoto );
    if ( NULL == suite_produttoreunico_buffervuoto_bloccante ) {
       CU_cleanup_registry();
       return CU_get_error();
    }
    /* add the tests to the suite suite_produttoreunico_buffervuoto_bloccante */
-   if ( (NULL == CU_add_test(suite_produttoreunico_buffervuoto_bloccante, "test_iniziale_semafori_putbloccante_buffervuoto", test_iniziale_semafori_putbloccante_buffervuoto)) ||
-        (NULL == CU_add_test(suite_produttoreunico_buffervuoto_bloccante, "test_produttoreunico_putbloccante_buffervuoto", test_produttoreunico_putbloccante_buffervuoto)) ||
-        (NULL == CU_add_test(suite_produttoreunico_buffervuoto_bloccante, "test_finale_semafori_putbloccante_buffervuoto", test_finale_semafori_putbloccante_buffervuoto))
+   if ( (NULL == CU_add_test(suite_produttoreunico_buffervuoto_bloccante, "Stato del buffer: Valutazione iniziale dei semafori", test_iniziale_semafori_putbloccante_buffervuoto)) ||
+        (NULL == CU_add_test(suite_produttoreunico_buffervuoto_bloccante, "Produzione di un messaggio", test_produttoreunico_putbloccante_buffervuoto)) ||
+        (NULL == CU_add_test(suite_produttoreunico_buffervuoto_bloccante, "Stato del buffer: Valutazione finale dei semafori", test_finale_semafori_putbloccante_buffervuoto))
     )
    {
       CU_cleanup_registry();
@@ -126,15 +134,15 @@ int main ( void )
    }
 
     /* add suite_produttoreunico_buffervuoto_nonbloccante to the registry */
-   suite_produttoreunico_buffervuoto_nonbloccante = CU_add_suite( "suite_produttoreunico_buffervuoto_nonbloccante", init_suite_produttoreunico_buffervuoto, clean_suite_produttoreunico_buffervuoto);
+   suite_produttoreunico_buffervuoto_nonbloccante = CU_add_suite( "Produzione di un messaggio in un buffer unitario vuoto: uso di chiamate non bloccanti", init_suite_produttoreunico_buffervuoto, clean_suite_produttoreunico_buffervuoto);
    if ( NULL == suite_produttoreunico_buffervuoto_nonbloccante ) {
       CU_cleanup_registry();
       return CU_get_error();
    }
    /* add the tests to the suite suite_produttoreunico_buffervuoto_nonbloccante */
-   if ( (NULL == CU_add_test(suite_produttoreunico_buffervuoto_nonbloccante, "test_iniziale_semafori_putnonbloccante_buffervuoto", test_iniziale_semafori_putnonbloccante_buffervuoto)) ||
-        (NULL == CU_add_test(suite_produttoreunico_buffervuoto_nonbloccante, "test_produttoreunico_putnonbloccante_buffervuoto", test_produttoreunico_putnonbloccante_buffervuoto)) ||
-        (NULL == CU_add_test(suite_produttoreunico_buffervuoto_nonbloccante, "test_finale_semafori_putnonbloccante_buffervuoto", test_finale_semafori_putnonbloccante_buffervuoto))
+   if ( (NULL == CU_add_test(suite_produttoreunico_buffervuoto_nonbloccante, "Stato del buffer: Valutazione iniziale dei semafori", test_iniziale_semafori_putnonbloccante_buffervuoto)) ||
+        (NULL == CU_add_test(suite_produttoreunico_buffervuoto_nonbloccante, "Produzione di un messaggio", test_produttoreunico_putnonbloccante_buffervuoto)) ||
+        (NULL == CU_add_test(suite_produttoreunico_buffervuoto_nonbloccante, "Stato del buffer: Valutazione finale dei semafori", test_finale_semafori_putnonbloccante_buffervuoto))
     )
    {
       CU_cleanup_registry();
@@ -159,6 +167,3 @@ int main ( void )
    CU_cleanup_registry();
    return CU_get_error();
 }
-
-
-//entrambe le suite hanno la stessa init e la stessa clean

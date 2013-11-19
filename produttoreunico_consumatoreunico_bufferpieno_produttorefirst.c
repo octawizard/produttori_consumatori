@@ -9,6 +9,7 @@
 
 buffer_t* buffer;
 msg_t* msg_0;
+int checkpoint;
 
 /* Test Suite setup and cleanup functions: */
 
@@ -17,6 +18,7 @@ int init_suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst(void
   buffer = buffer_init(1);
   msg_t* msg = msg_init_string("messaggio 0");
   msg_0 = put_bloccante(buffer, msg);  //già testata
+  checkpoint = 0;
   return 0;
 }
 
@@ -26,19 +28,6 @@ int clean_suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst(voi
 }
 
 /************* Test case functions ****************/
-
-/*void test_case_sample(void)
-{
-   CU_ASSERT(CU_TRUE);
-   CU_ASSERT_NOT_EQUAL(2, -1);
-   CU_ASSERT_STRING_EQUAL("string #1", "string #1");
-   CU_ASSERT_STRING_NOT_EQUAL("string #1", "string #2");
-
-   CU_ASSERT(CU_FALSE);
-   CU_ASSERT_EQUAL(2, 3);
-   CU_ASSERT_STRING_NOT_EQUAL("string #1", "string #1");
-   CU_ASSERT_STRING_EQUAL("string #1", "string #2");
-}*/
 
 /* test della suite suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_bloccante */
 void test_iniziale_semafori_bloccante_bufferpieno (void){
@@ -51,16 +40,14 @@ void test_iniziale_semafori_bloccante_bufferpieno (void){
 }
 
 void* thread_function_produttore_bloccante (void* arg){
-  params_t* p = (params_t*) arg;
-  buffer_t* buffer= p->buffer;
-  msg_t* msg = p->msg;
+  msg_t* msg = (msg_t*) arg;
   msg_t* msg_1 = put_bloccante(buffer, msg);
+  checkpoint = 1;
   return (void*) msg_1;
 }
 
 void* thread_function_consumatore_bloccante (void* arg){
-  buffer_t* b = (buffer_t*) arg;
-  msg_t* msg = get_bloccante(b);
+  msg_t* msg = get_bloccante(buffer);
   return (void*) msg;
 }
 
@@ -72,20 +59,19 @@ void test_consumatoreunico_produttoreunico_putbloccante_getbloccante_bufferpieno
   msg_t* ret_msg_0;
   msg_t* msg_1 = msg_init_string("messaggio 1");
   CU_ASSERT_STRING_EQUAL (((char *)msg_1->content), "messaggio 1");
-  params_t* par = (params_t*)malloc( sizeof(params_t));
-  par->buffer = buffer;
-  par->msg = msg_1;
   //lancio la PUT per prima, poi la get
-  pthread_create (&mythreadP, NULL, thread_function_produttore_bloccante, par);
-  sleep(1);
-  pthread_create (&mythreadC,NULL,thread_function_consumatore_bloccante, buffer);
+  pthread_create (&mythreadP, NULL, thread_function_produttore_bloccante, msg_1);
+  sleep(3);
+  //verifico che la put è in blocco
+  CU_ASSERT_EQUAL (checkpoint, 0);
+  pthread_create (&mythreadC,NULL,thread_function_consumatore_bloccante, NULL);
   pthread_join(mythreadP,(void*) &ret_msg_1);
   pthread_join(mythreadC,(void*) &ret_msg_0);
   //verifico che il messaggio estratto dal buffer sia quello atteso
   CU_ASSERT_STRING_EQUAL (((char *)ret_msg_0->content), ((char *)msg_0->content));  //dovrebbe restituire messaggio 0
   //verifico che il messaggio inserito nel buffer sia quello atteso; la put va a buon fine solo dopo la get che lo sblocca
-  CU_ASSERT_STRING_EQUAL ((char *)((buffer->buf)[0]).content, ((char *)ret_msg_1->content));
-
+  CU_ASSERT_STRING_EQUAL ((char *)((buffer->buf)[0]).content, ((char *)msg_1->content));
+  CU_ASSERT_STRING_EQUAL (((char *)ret_msg_1->content), ((char *)msg_1->content));
 }
 
 void test_finale_semafori_bloccante_bufferpieno (void){
@@ -108,17 +94,14 @@ void test_iniziale_semafori_nonbloccante_buffervuoto (void){
 }
 
 void* thread_function_produttore_nonbloccante (void* arg){
-  params_t* p = (params_t*) arg;
-  buffer_t* buffer= p->buffer;
-  msg_t* msg = p->msg;
-  msg_t* msg_1 = put_non_bloccante(buffer, msg);
-  return (void*) msg_1;
+    msg_t* msg = (msg_t*) arg;
+    msg_t* msg_1 = put_non_bloccante(buffer, msg);
+    return (void*) msg_1;
 }
 
 void* thread_function_consumatore_nonbloccante (void* arg){
-  buffer_t* b = (buffer_t*) arg;
-  msg_t* msg = get_non_bloccante(b);
-  return (void*) msg;
+    msg_t* msg = get_non_bloccante(buffer);
+    return (void*) msg;
 }
 
 void test_consumatoreunico_produttoreunico_putnonbloccante_getnonbloccante_bufferpieno_produttorefirst(void) {
@@ -128,19 +111,16 @@ void test_consumatoreunico_produttoreunico_putnonbloccante_getnonbloccante_buffe
   msg_t* ret_msg_0;
   msg_t* msg_1 = msg_init_string("messaggio 1");
   CU_ASSERT_STRING_EQUAL (((char *)msg_1->content), "messaggio 1");
-  params_t* par = (params_t*)malloc( sizeof(params_t));
-  par->buffer = buffer;
-  par->msg = msg_1;
   //lancio la get per prima, poi la put
-  pthread_create (&mythreadP, NULL, thread_function_produttore_nonbloccante, par);
-  sleep(1);       // devo introdurlo per imporre la specifica del test "prima il produttore"; in caso contrario segm fault su ret_msg_1
-  pthread_create (&mythreadC,NULL,thread_function_consumatore_nonbloccante, buffer);
+  pthread_create (&mythreadP, NULL, thread_function_produttore_nonbloccante, msg_1);
+  sleep(3);       // devo introdurlo per imporre la specifica del test "prima il produttore"
+  pthread_create (&mythreadC,NULL,thread_function_consumatore_nonbloccante, NULL);
   pthread_join(mythreadP,(void*) &ret_msg_1);
   pthread_join(mythreadC,(void*) &ret_msg_0);
   //verifico che il messaggio estratto dal buffer sia quello atteso
   CU_ASSERT_STRING_EQUAL (((char *)ret_msg_0->content), ((char *)msg_0->content));  //dovrebbe restituire messaggio 0
-  //verifico che il messaggio restituito dalla put sia un BUFFER_ERROR
-  CU_ASSERT_EQUAL (BUFFER_ERROR, ret_msg_1);
+  //verifico che l'esecuzione della put sia fallita
+  CU_ASSERT_EQUAL (ret_msg_1, NULL);
 }
 
 void test_finale_semafori_nonbloccante_buffervuoto (void){
@@ -163,15 +143,15 @@ int main ( void )
       return CU_get_error();
 
    /* add suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_bloccante to the registry */
-   suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_bloccante = CU_add_suite( "suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_bloccante", init_suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst, clean_suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst );
+   suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_bloccante = CU_add_suite( "Consumazione e produzione concorrente di un messaggio da un buffer unitario; prima il produttore - uso di chiamate bloccanti", init_suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst, clean_suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst );
    if ( NULL == suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_bloccante ) {
       CU_cleanup_registry();
       return CU_get_error();
    }
    /* add the tests to the suite suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_bloccante */
-   if ( (NULL == CU_add_test(suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_bloccante, "test_iniziale_semafori_bloccante_bufferpieno", test_iniziale_semafori_bloccante_bufferpieno)) ||
-        (NULL == CU_add_test(suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_bloccante, "test_consumatoreunico_produttoreunico_putbloccante_getbloccante_bufferpieno_produttorefirst", test_consumatoreunico_produttoreunico_putbloccante_getbloccante_bufferpieno_produttorefirst)) ||
-        (NULL == CU_add_test(suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_bloccante, "test_finale_semafori_bloccante_bufferpieno", test_finale_semafori_bloccante_bufferpieno))
+   if ( (NULL == CU_add_test(suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_bloccante, "Stato del buffer: Valutazione iniziale dei semafori", test_iniziale_semafori_bloccante_bufferpieno)) ||
+        (NULL == CU_add_test(suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_bloccante, "Prima produzione di un messaggio poi estrazione di un messaggio", test_consumatoreunico_produttoreunico_putbloccante_getbloccante_bufferpieno_produttorefirst)) ||
+        (NULL == CU_add_test(suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_bloccante, "Stato del buffer: Valutazione finale dei semafori", test_finale_semafori_bloccante_bufferpieno))
     )
    {
       CU_cleanup_registry();
@@ -179,15 +159,15 @@ int main ( void )
    }
 
     /* add suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_nonbloccante to the registry */
-   suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_nonbloccante = CU_add_suite( "suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_nonbloccante", init_suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst, clean_suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst);
+   suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_nonbloccante = CU_add_suite( "Consumazione e produzione concorrente di un messaggio da un buffer unitario; prima il produttore - uso di chiamate non bloccanti", init_suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst, clean_suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst);
    if ( NULL == suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_nonbloccante ) {
       CU_cleanup_registry();
       return CU_get_error();
    }
    /* add the tests to the suite suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_nonbloccante */
-   if ( (NULL == CU_add_test(suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_nonbloccante, "test_iniziale_semafori_nonbloccante_buffervuoto", test_iniziale_semafori_nonbloccante_buffervuoto)) ||
-        (NULL == CU_add_test(suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_nonbloccante, "test_consumatoreunico_produttoreunico_putnonbloccante_getnonbloccante_bufferpieno_produttorefirst", test_consumatoreunico_produttoreunico_putnonbloccante_getnonbloccante_bufferpieno_produttorefirst)) ||
-        (NULL == CU_add_test(suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_nonbloccante, "test_finale_semafori_nonbloccante_buffervuoto", test_finale_semafori_nonbloccante_buffervuoto))
+   if ( (NULL == CU_add_test(suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_nonbloccante, "Stato del buffer: Valutazione iniziale dei semafori", test_iniziale_semafori_nonbloccante_buffervuoto)) ||
+        (NULL == CU_add_test(suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_nonbloccante, "Prima produzione di un messaggio poi estrazione di un messaggio", test_consumatoreunico_produttoreunico_putnonbloccante_getnonbloccante_bufferpieno_produttorefirst)) ||
+        (NULL == CU_add_test(suite_produttoreunico_consumatoreunico_bufferpieno_produttorefirst_nonbloccante, "Stato del buffer: Valutazione finale dei semafori", test_finale_semafori_nonbloccante_buffervuoto))
     )
    {
       CU_cleanup_registry();

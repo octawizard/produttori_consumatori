@@ -36,19 +36,6 @@ int clean_suite_consumatorimolteplici_produttorimolteplici_bufferunitario(void) 
 
 /************* Test case functions ****************/
 
-/*void test_case_sample(void)
-{
-   CU_ASSERT(CU_TRUE);
-   CU_ASSERT_NOT_EQUAL(2, -1);
-   CU_ASSERT_STRING_EQUAL("string #1", "string #1");
-   CU_ASSERT_STRING_NOT_EQUAL("string #1", "string #2");
-
-   CU_ASSERT(CU_FALSE);
-   CU_ASSERT_EQUAL(2, 3);
-   CU_ASSERT_STRING_NOT_EQUAL("string #1", "string #1");
-   CU_ASSERT_STRING_EQUAL("string #1", "string #2");
-}*/
-
 /* test della suite suite_consumatorimolteplici_bufferpieno_bloccante */
 void test_iniziale_semafori_bloccante_bufferunitario (void){
   //verifico lo stato del buffer: vuote=1 e piene=0
@@ -99,6 +86,8 @@ void test_consumatorimolteplici_produttorimolteplici_bloccante_bufferunitario(vo
   pthread_create (&threadC1, NULL, thread_function_consumatore_bloccante_1, NULL);
   pthread_create (&threadP0, NULL, thread_function_produttore_bloccante_0, msg_0);
   pthread_create (&threadP1, NULL, thread_function_produttore_bloccante_1, msg_1);
+  pthread_join(threadP0, NULL);
+  pthread_join(threadP1, NULL);
   pthread_join(threadC0, (void*)&ret_msg_0);
   pthread_join(threadC1, (void*)&ret_msg_1);
   //verifico che la somma dei checkpoint valga sempre 4; ovvero tutti i flussi sono terminati in tempo finito
@@ -173,10 +162,10 @@ void test_consumatorimolteplici_produttorimolteplici_nonbloccante_bufferunitario
   //nel buffer non sono presenti messaggi
   CU_ASSERT (NULL == ((buffer->buf)[0]).content);
   //SOLLECITAZIONE: lancio due thread putnonbloccante per scrivere nel buffer e due thread getnonbloccante per leggere dal buffer
-  //l'obiettivo è fare in modo che solo una delle due put e una delle due get vadano regolarmente a buon fine
+  //l'obiettivo è simulare lo scenario in cui solo una delle due put e una delle due get vadano regolarmente a buon fine
   pthread_create (&threadP0, NULL, thread_function_produttore_nonbloccante_0, msg_0);
   pthread_create (&threadP1, NULL, thread_function_produttore_nonbloccante_1, msg_1);
-  sleep(2);   //forza le seq di interleaving
+  sleep(5);   //forza le seq di interleaving
   pthread_create (&threadC0, NULL, thread_function_consumatore_nonbloccante_0, NULL);
   pthread_create (&threadC1, NULL, thread_function_consumatore_nonbloccante_1, NULL);
   pthread_join(threadC0,(void*) &ret_msg_c0);
@@ -184,7 +173,7 @@ void test_consumatorimolteplici_produttorimolteplici_nonbloccante_bufferunitario
   pthread_join(threadP0,(void*) &ret_msg_p0);
   pthread_join(threadP1,(void*) &ret_msg_p1);
   //verifico che al massimo un produttore e al massimo un consumatore abbiano portato a termine le operazioni
-  CU_ASSERT_EQUAL (checkpoint_c0+checkpoint_c1, 1); //il checkpoint vale uno se la funzione corrispondente non è andata a buon fine
+  CU_ASSERT_EQUAL (checkpoint_c0+checkpoint_c1, 1); //il checkpoint vale uno se la funzione corrispondente NON è andata a buon fine
   CU_ASSERT_EQUAL (checkpoint_p0+checkpoint_p1, 1);
   if (checkpoint_p0 == 0){  //flusso p0 andato a termine regolarmente dopo l'inserimento nel buffer
     CU_ASSERT_STRING_EQUAL (((char *)ret_msg_p0->content), ((char *)msg_0->content));
@@ -222,15 +211,15 @@ int main ( void )
       return CU_get_error();
 
    /* add suite_consumatorimolteplici_bufferpieno_bloccante to the registry */
-   suite_consumatorimolteplici_produttorimolteplici_bufferunitario_bloccante = CU_add_suite( "suite_consumatorimolteplici_produttorimolteplici_bufferunitario_bloccante", init_suite_consumatorimolteplici_produttorimolteplici_bufferunitario, clean_suite_consumatorimolteplici_produttorimolteplici_bufferunitario );
+   suite_consumatorimolteplici_produttorimolteplici_bufferunitario_bloccante = CU_add_suite( "Consumazioni e produzioni concorrenti di molteplici messaggi in un buffer unitario: uso di chiamate bloccanti", init_suite_consumatorimolteplici_produttorimolteplici_bufferunitario, clean_suite_consumatorimolteplici_produttorimolteplici_bufferunitario );
    if ( NULL == suite_consumatorimolteplici_produttorimolteplici_bufferunitario_bloccante ) {
       CU_cleanup_registry();
       return CU_get_error();
    }
    /* add the tests to the suite suite_consumatorimolteplici_bufferpieno_bloccante */
-   if ( (NULL == CU_add_test(suite_consumatorimolteplici_produttorimolteplici_bufferunitario_bloccante, "test_iniziale_semafori_bloccante_bufferunitario", test_iniziale_semafori_bloccante_bufferunitario)) ||
-        (NULL == CU_add_test(suite_consumatorimolteplici_produttorimolteplici_bufferunitario_bloccante, "test_consumatorimolteplici_produttorimolteplici_bloccante_bufferunitario", test_consumatorimolteplici_produttorimolteplici_bloccante_bufferunitario)) ||
-        (NULL == CU_add_test(suite_consumatorimolteplici_produttorimolteplici_bufferunitario_bloccante, "test_finale_semafori_bloccante_bufferunitario", test_finale_semafori_bloccante_bufferunitario))
+   if ( (NULL == CU_add_test(suite_consumatorimolteplici_produttorimolteplici_bufferunitario_bloccante, "Stato del buffer: Valutazione iniziale dei semafori", test_iniziale_semafori_bloccante_bufferunitario)) ||
+        (NULL == CU_add_test(suite_consumatorimolteplici_produttorimolteplici_bufferunitario_bloccante, "Lancio rispettivamente di due produzioni concorrenti prima di due estrazioni concorrenti", test_consumatorimolteplici_produttorimolteplici_bloccante_bufferunitario)) ||
+        (NULL == CU_add_test(suite_consumatorimolteplici_produttorimolteplici_bufferunitario_bloccante, "Stato del buffer: Valutazione finale dei semafori", test_finale_semafori_bloccante_bufferunitario))
     )
    {
       CU_cleanup_registry();
@@ -238,15 +227,15 @@ int main ( void )
    }
 
    /* add suite_consumatorimolteplici_produttorimolteplici_bufferunitario_nonbloccante to the registry */
-   suite_consumatorimolteplici_produttorimolteplici_bufferunitario_nonbloccante = CU_add_suite( "suite_consumatorimolteplici_produttorimolteplici_bufferunitario_nonbloccante", init_suite_consumatorimolteplici_produttorimolteplici_bufferunitario, clean_suite_consumatorimolteplici_produttorimolteplici_bufferunitario);
+   suite_consumatorimolteplici_produttorimolteplici_bufferunitario_nonbloccante = CU_add_suite( "Consumazioni e produzioni concorrenti di molteplici messaggi in un buffer unitario: uso di chiamate non bloccanti", init_suite_consumatorimolteplici_produttorimolteplici_bufferunitario, clean_suite_consumatorimolteplici_produttorimolteplici_bufferunitario);
    if ( NULL == suite_consumatorimolteplici_produttorimolteplici_bufferunitario_nonbloccante ) {
       CU_cleanup_registry();
       return CU_get_error();
    }
    /* add the tests to the suite suite_consumatorimolteplici_produttorimolteplici_bufferunitario_nonbloccante */
-   if ( (NULL == CU_add_test(suite_consumatorimolteplici_produttorimolteplici_bufferunitario_nonbloccante, "test_iniziale_semafori_nonbloccante_bufferunitario", test_iniziale_semafori_nonbloccante_bufferunitario)) ||
-        (NULL == CU_add_test(suite_consumatorimolteplici_produttorimolteplici_bufferunitario_nonbloccante, "test_consumatorimolteplici_produttorimolteplici_nonbloccante_bufferunitario", test_consumatorimolteplici_produttorimolteplici_nonbloccante_bufferunitario)) ||
-        (NULL == CU_add_test(suite_consumatorimolteplici_produttorimolteplici_bufferunitario_nonbloccante, "test_finale_semafori_nonbloccante_bufferunitario", test_finale_semafori_nonbloccante_bufferunitario))
+   if ( (NULL == CU_add_test(suite_consumatorimolteplici_produttorimolteplici_bufferunitario_nonbloccante, "Stato del buffer: Valutazione iniziale dei semafori", test_iniziale_semafori_nonbloccante_bufferunitario)) ||
+        (NULL == CU_add_test(suite_consumatorimolteplici_produttorimolteplici_bufferunitario_nonbloccante, "Lancio rispettivamente di due produzioni concorrenti prima di due estrazioni concorrenti", test_consumatorimolteplici_produttorimolteplici_nonbloccante_bufferunitario)) ||
+        (NULL == CU_add_test(suite_consumatorimolteplici_produttorimolteplici_bufferunitario_nonbloccante, "Stato del buffer: Valutazione finale dei semafori", test_finale_semafori_nonbloccante_bufferunitario))
     )
    {
       CU_cleanup_registry();

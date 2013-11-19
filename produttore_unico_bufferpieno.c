@@ -21,25 +21,13 @@ int init_suite_produttoreunico_bufferpieno(void) {
   return 0;
 }
 
-int clean_suite_produttoreunico_bufferpieno(void) { 
+int clean_suite_produttoreunico_bufferpieno(void) {
+  msg_destroy_string(msg_0);
   buffer_destroy(buffer);
   return 0; 
 }
 
 /************* Test case functions ****************/
-
-/*void test_case_sample(void)
-{
-   CU_ASSERT(CU_TRUE);
-   CU_ASSERT_NOT_EQUAL(2, -1);
-   CU_ASSERT_STRING_EQUAL("string #1", "string #1");
-   CU_ASSERT_STRING_NOT_EQUAL("string #1", "string #2");
-
-   CU_ASSERT(CU_FALSE);
-   CU_ASSERT_EQUAL(2, 3);
-   CU_ASSERT_STRING_NOT_EQUAL("string #1", "string #1");
-   CU_ASSERT_STRING_EQUAL("string #1", "string #2");
-}*/
 
 /* test della suite suite_produttoreunico_bufferpieno_bloccante */
 void test_iniziale_semafori_putbloccante_bufferpieno (void){
@@ -52,36 +40,29 @@ void test_iniziale_semafori_putbloccante_bufferpieno (void){
 }
 
 void* thread_function_produttore_bloccante (void* arg){
-  params_t* p = (params_t*) arg;
-  buffer_t* buffer= p->buffer;
-  msg_t* msg = p->msg;
+  msg_t* msg = (msg_t*) arg;
   msg_t* msg_1 = put_bloccante(buffer, msg);
   checkpoint = 1;
   return (void*) msg_1;
 }
 
-//ci sono due livelli di indirezione: il produttore richiede l'esecuzione di putbloccante che a sua volta richiama un thread. dentro la put c'è una join che fa stallare
 //CAUSO STALLO: forse devo lanciare due thread, prima quello del produttore, e poi del consumatore per vedere se stalla
 void test_produttoreunico_putbloccante_bufferpieno(void) {
   pthread_t thread_produttore;
-  msg_t* ret_msg_0;
   msg_t* msg = msg_init_string("messaggio 1");
   CU_ASSERT_STRING_EQUAL (((char *)msg->content), "messaggio 1");
-  params_t* par = (params_t*)malloc( sizeof(params_t));
-  par->buffer = buffer;
-  par->msg = msg;
   //nel buffer sono presenti messaggi
-  CU_ASSERT (NULL != ((buffer->buf)[0]).content);
+  CU_ASSERT_STRING_EQUAL ((char *)(buffer->buf[0].content), ((char *)msg_0->content));
   //SOLLECITAZIONE: lancio il thread per inserire un messaggio dentro un buffer pieno
-  pthread_create (&thread_produttore,NULL,thread_function_produttore_bloccante, par);
-  //pthread_join(thread_produttore,(void*)&ret_msg_0);  <-- se faccio la join va in stallo
+  pthread_create (&thread_produttore,NULL,thread_function_produttore_bloccante, msg);
   //verifico che il flusso è in wait controllando il valore checkpoint; se rimane zero, vuol dire che il flusso è ancora bloccato sulla put
-  sleep(1);
+  sleep(5);
   CU_ASSERT_EQUAL(checkpoint, 0);
   //inoltre verifico che il nuovo inserimento nel buffer non sia stato ancora eseguito; per via del flusso in wait
-  CU_ASSERT_STRING_EQUAL ((char *)(buffer->buf[0].content), ((char *)msg_0->content));
-  sleep(1); //non da la certezza, ma ci fa aumentare le probabilità che nel tempo, il buffer non è stato scritto
   CU_ASSERT_STRING_EQUAL ((char *)(buffer->buf[0].content), ((char *)msg_0->content));  //qui nel buffer c'è "messaggio 0"
+
+
+  //potrei verificare che in seguito a una get, la put viene sbloccata
 }
 
 void test_finale_semafori_putbloccante_bufferpieno (void){
@@ -104,9 +85,7 @@ void test_iniziale_semafori_putnonbloccante_buffervuoto (void){
 }
 
 void* thread_function_produttore_nonbloccante (void* arg){
-  params_t* p = (params_t*) arg;
-  buffer_t* buffer= p->buffer;
-  msg_t* msg = p->msg;
+  msg_t* msg = (msg_t*) arg;
   msg_t* msg_1 = put_non_bloccante(buffer, msg);
   checkpoint = 1;
   CU_ASSERT_EQUAL(checkpoint, 1);
@@ -118,18 +97,16 @@ void test_produttoreunico_putnonbloccante_buffervuoto(void) {
   msg_t* ret_msg_0;
   msg_t* msg = msg_init_string("messaggio 1");
   CU_ASSERT_STRING_EQUAL (((char *)msg->content), "messaggio 1");
-  params_t* par = (params_t*)malloc( sizeof(params_t));
-  par->buffer = buffer;
-  par->msg = msg;
   //nel buffer sono presenti messaggi
-  CU_ASSERT (NULL != ((buffer->buf)[0]).content);
+  CU_ASSERT_STRING_EQUAL ((char *)(buffer->buf[0].content), ((char *)msg_0->content));
   //SOLLECITAZIONE: lancio il thread per inserire un messaggio dentro un buffer pieno
-  pthread_create (&thread_produttore,NULL,thread_function_produttore_nonbloccante, par);
+  pthread_create (&thread_produttore,NULL,thread_function_produttore_nonbloccante, msg);
   pthread_join(thread_produttore,(void*)&ret_msg_0);  //<--- anche facendo la join il flusso non va in blocco perchè la funz non è bloccante
   //verifico che il flusso NON è in wait controllando il valore checkpoint; se è uguale a 1, vuol dire che il flusso non è in wait
+  sleep(5);
   CU_ASSERT_EQUAL(checkpoint, 1);
-  //dovrebbe restituire null
-  CU_ASSERT_EQUAL (BUFFER_ERROR , ret_msg_0); //VERIFICARE SE È CORRETTO
+  //il thread deve restituire null
+  CU_ASSERT (NULL == ret_msg_0);
   //inoltre verifico che il nuovo inserimento nel buffer non sia stato ancora eseguito; per via del flusso in wait
   CU_ASSERT_STRING_EQUAL ((char *)(buffer->buf[0].content), ((char *)msg_0->content));
 }
@@ -154,15 +131,15 @@ int main ( void )
       return CU_get_error();
 
    /* add suite_produttoreunico_bufferpieno_bloccante to the registry */
-   suite_produttoreunico_bufferpieno_bloccante = CU_add_suite( "suite_produttoreunico_bufferpieno_bloccante", init_suite_produttoreunico_bufferpieno, clean_suite_produttoreunico_bufferpieno );
+   suite_produttoreunico_bufferpieno_bloccante = CU_add_suite( "Produzione di un messaggio in un buffer unitario pieno: uso di chiamate bloccanti", init_suite_produttoreunico_bufferpieno, clean_suite_produttoreunico_bufferpieno );
    if ( NULL == suite_produttoreunico_bufferpieno_bloccante ) {
       CU_cleanup_registry();
       return CU_get_error();
    }
    /* add the tests to the suite suite_produttoreunico_bufferpieno_bloccante */
-   if ( (NULL == CU_add_test(suite_produttoreunico_bufferpieno_bloccante, "test_iniziale_semafori_putbloccante_bufferpieno", test_iniziale_semafori_putbloccante_bufferpieno)) ||
-        (NULL == CU_add_test(suite_produttoreunico_bufferpieno_bloccante, "test_produttoreunico_putbloccante_bufferpieno", test_produttoreunico_putbloccante_bufferpieno)) ||
-        (NULL == CU_add_test(suite_produttoreunico_bufferpieno_bloccante, "test_finale_semafori_putbloccante_bufferpieno", test_finale_semafori_putbloccante_bufferpieno))
+   if ( (NULL == CU_add_test(suite_produttoreunico_bufferpieno_bloccante, "Stato del buffer: Valutazione iniziale dei semafori", test_iniziale_semafori_putbloccante_bufferpieno)) ||
+        (NULL == CU_add_test(suite_produttoreunico_bufferpieno_bloccante, "Produzione di un messaggio", test_produttoreunico_putbloccante_bufferpieno)) ||
+        (NULL == CU_add_test(suite_produttoreunico_bufferpieno_bloccante, "Stato del buffer: Valutazione finale dei semafori", test_finale_semafori_putbloccante_bufferpieno))
     )
    {
       CU_cleanup_registry();
@@ -170,15 +147,15 @@ int main ( void )
    }
 
     /* add suite_produttoreunico_bufferpieno_nonbloccante to the registry */
-   suite_produttoreunico_bufferpieno_nonbloccante = CU_add_suite( "suite_produttoreunico_bufferpieno_nonbloccante", init_suite_produttoreunico_bufferpieno, clean_suite_produttoreunico_bufferpieno);
+   suite_produttoreunico_bufferpieno_nonbloccante = CU_add_suite( "Produzione di un messaggio in un buffer unitario pieno: uso di chiamate non bloccanti", init_suite_produttoreunico_bufferpieno, clean_suite_produttoreunico_bufferpieno);
    if ( NULL == suite_produttoreunico_bufferpieno_nonbloccante ) {
       CU_cleanup_registry();
       return CU_get_error();
    }
    /* add the tests to the suite suite_produttoreunico_bufferpieno_nonbloccante */
-   if ( (NULL == CU_add_test(suite_produttoreunico_bufferpieno_nonbloccante, "test_iniziale_semafori_putnonbloccante_buffervuoto", test_iniziale_semafori_putnonbloccante_buffervuoto)) ||
-        (NULL == CU_add_test(suite_produttoreunico_bufferpieno_nonbloccante, "test_produttoreunico_putnonbloccante_buffervuoto", test_produttoreunico_putnonbloccante_buffervuoto)) ||
-        (NULL == CU_add_test(suite_produttoreunico_bufferpieno_nonbloccante, "test_finale_semafori_putnonbloccante_buffervuoto", test_finale_semafori_putnonbloccante_buffervuoto))
+   if ( (NULL == CU_add_test(suite_produttoreunico_bufferpieno_nonbloccante, "Stato del buffer: Valutazione iniziale dei semafori", test_iniziale_semafori_putnonbloccante_buffervuoto)) ||
+        (NULL == CU_add_test(suite_produttoreunico_bufferpieno_nonbloccante, "Produzione di un messaggio", test_produttoreunico_putnonbloccante_buffervuoto)) ||
+        (NULL == CU_add_test(suite_produttoreunico_bufferpieno_nonbloccante, "Stato del buffer: Valutazione finale dei semafori", test_finale_semafori_putnonbloccante_buffervuoto))
     )
    {
       CU_cleanup_registry();
@@ -203,6 +180,3 @@ int main ( void )
    CU_cleanup_registry();
    return CU_get_error();
 }
-
-
-//entrambe le suite hanno la stessa init e la stessa clean

@@ -3,7 +3,6 @@
 #include <pthread.h>
 #include <semaphore.h>
 #define BUFFER_ERROR (msg_t *) NULL
-//#define N 5
 
 /* STRUTTURE DATI DEFINITE */
 typedef struct msg {
@@ -81,23 +80,6 @@ msg_t* msg_copy_string(msg_t* msg) {
 	return msg_init_string( msg->content );
 }
 
-//due thread_function: consumatore e produttore
-// per far ciclare le get e le put
-/*
-void produttore(buffer_t* buff){
-	int cont=0;
-	char* scont;
-	char* stringa = "Messaggio num.";	//funzione itoa
-	while (1){
-		scont = (char*)cont;
-		strcat (stringa, scont);
-		msg_t* msg = msg_init_string(stringa);
-		if (put_bloccante(buff, msg) == NULL)
-			return BUFFER_ERROR;
-		cont++;
-	}
-}*/
-
 buffer_t* buffer_init(unsigned int maxsize){
 	buffer_t* buffer = (buffer_t*)malloc( sizeof(buffer_t) );	//alloco il buffer
 	msg_t* array = (msg_t *)malloc( sizeof(msg_t)*maxsize);		//alloco l'array di messaggi contenuto nel buffer
@@ -114,11 +96,10 @@ buffer_t* buffer_init(unsigned int maxsize){
 void buffer_destroy(buffer_t* buffer){
 	int i = 0;
 	free(buffer->buf);		//dealloco l'array di msg
-	free(buffer);	//dopodichè dealloco il buffer
+	free(buffer);			//dopodichè dealloco il buffer
 	sem_destroy(&vuote);	//distruggi i semafori
 	sem_destroy(&piene);
 }
-
 
 void* thread_function_produttore(void* arg){
 	params_t* p = (params_t*) arg;
@@ -161,7 +142,7 @@ void* thread_function_produttore_nb(void* arg){
 		return BUFFER_ERROR;
 }
 
-msg_t* put_non_bloccante(buffer_t* buffer, msg_t* msg){	//scelta tra sem posix e var cndizione; Forse conviene usare i semafori posix che implementano facilmente il concetto di attesa non bloccante
+msg_t* put_non_bloccante(buffer_t* buffer, msg_t* msg){	//scelta tra sem posix e var condizione; Forse conviene usare i semafori posix che implementano facilmente il concetto di attesa non bloccante
 	//creo una struttura dati per passare entrambi i parametri al thread
 	params_t* par = (params_t*)malloc( sizeof(params_t));
 	par->buffer = buffer;
@@ -218,13 +199,7 @@ msg_t* get_non_bloccante(buffer_t* buffer){
 }
 
 
-/*int main (void){
-	buffer_t* b = buffer_init(1);
-	buffer_destroy(b);
-}
-//PROBLEMI DA RISOLVERE
+//COSE STRANE
 /*
 1) buffer_destroy, devo anche cancellare ogni singolo messaggio? mi dava seg fault facendolo, subito dopo che cancello il primo msg
-
-una soluzione può essere allocare la dimensione del buffer come parametro del buffer stesso
 */
