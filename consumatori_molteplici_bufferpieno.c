@@ -5,7 +5,8 @@
   #include <pthread.h>
   #include <semaphore.h>
   #include "hwc1.c"
-  #include <stdio.h>  // for printf
+  #include <stdio.h>
+  #define SUSPENSIONTIME 5
 
   buffer_t* buffer;
   msg_t* msg;
@@ -62,7 +63,7 @@
     pthread_create (&thread0, NULL, thread_function_consumatore_bloccante_0, NULL);
     pthread_create (&thread1, NULL, thread_function_consumatore_bloccante_1, NULL);
     //verifico che la somma dei checkpoint valga sempre 1; ciò vuol dire che uno dei due flussi è ancora in wait
-    sleep(5); //do tempo ai due flussi di procedere, ma uno dei due rimarrà in blocco
+    sleep(SUSPENSIONTIME); //do tempo ai due flussi di procedere, ma uno dei due rimarrà in blocco
     CU_ASSERT_EQUAL (checkpoint_0+checkpoint_1, 1);
     //inoltre verifico che uno dei due flussi abbia estratto dal buffer il messaggio
     if (checkpoint_0 == 1){

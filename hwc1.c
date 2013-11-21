@@ -2,6 +2,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <semaphore.h>
+//#include "hwc1.h"
 #define BUFFER_ERROR (msg_t *) NULL
 
 /* STRUTTURE DATI DEFINITE */
@@ -202,4 +203,5 @@ msg_t* get_non_bloccante(buffer_t* buffer){
 //COSE STRANE
 /*
 1) buffer_destroy, devo anche cancellare ogni singolo messaggio? mi dava seg fault facendolo, subito dopo che cancello il primo msg
+2) per richiamare direttamente l'header, basta definire le strutture solo nell'header, poi compilare insieme i test insieme a hwc1.
 */

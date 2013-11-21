@@ -5,7 +5,9 @@
   #include <pthread.h>
   #include <semaphore.h>
   #include "hwc1.c"
-  #include <stdio.h>  // for printf
+  #include <stdio.h>
+
+  #define SUSPENSIONTIME 3
 
   buffer_t* buffer;
   msg_t* msg_0;
@@ -57,7 +59,7 @@
     CU_ASSERT_STRING_EQUAL (((char *)msg_1->content), "messaggio 1");
     //lancio la get per prima, poi la put
     pthread_create (&mythreadC,NULL,thread_function_consumatore_bloccante, NULL);
-    sleep(2); //per imporre la seq di interleaving in cui il consumatore è primo
+    sleep(SUSPENSIONTIME); //per imporre la seq di interleaving in cui il consumatore è primo
     pthread_create (&mythreadP, NULL, thread_function_produttore_bloccante, msg_1);
     pthread_join(mythreadC,(void*) &ret_msg_0);
     pthread_join(mythreadP,(void*) &ret_msg_1);
@@ -66,7 +68,6 @@
     //verifico che il messaggio inserito nel buffer sia quello atteso
     CU_ASSERT_STRING_EQUAL ((char *)((buffer->buf)[0]).content, ((char *)msg_1->content));
     CU_ASSERT_STRING_EQUAL (((char *)ret_msg_1->content), ((char *)msg_1->content));
-
   }
 
   void test_finale_semafori_bloccante_bufferpieno (void){
@@ -108,7 +109,7 @@
     CU_ASSERT_STRING_EQUAL (((char *)msg_1->content), "messaggio 1");
     //lancio la get per prima, poi la put
     pthread_create (&mythreadC,NULL,thread_function_consumatore_nonbloccante, NULL);
-    sleep(3);       // devo introdurlo per imporre la specifica del test "prima il consumatore"
+    sleep(SUSPENSIONTIME);       // devo introdurlo per imporre la specifica del test "prima il consumatore"
     pthread_create (&mythreadP, NULL, thread_function_produttore_nonbloccante, msg_1);
     pthread_join(mythreadC,(void*) &ret_msg_0);
     pthread_join(mythreadP,(void*) &ret_msg_1);

@@ -5,7 +5,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "hwc1.c"
-#include <stdio.h>  // for printf
+#include <stdio.h>
+#define SUSPENSIONTIME 5
 
 buffer_t* buffer;
 msg_t* msg_0;
@@ -56,13 +57,10 @@ void test_produttoreunico_putbloccante_bufferpieno(void) {
   //SOLLECITAZIONE: lancio il thread per inserire un messaggio dentro un buffer pieno
   pthread_create (&thread_produttore,NULL,thread_function_produttore_bloccante, msg);
   //verifico che il flusso è in wait controllando il valore checkpoint; se rimane zero, vuol dire che il flusso è ancora bloccato sulla put
-  sleep(5);
+  sleep(SUSPENSIONTIME);
   CU_ASSERT_EQUAL(checkpoint, 0);
   //inoltre verifico che il nuovo inserimento nel buffer non sia stato ancora eseguito; per via del flusso in wait
   CU_ASSERT_STRING_EQUAL ((char *)(buffer->buf[0].content), ((char *)msg_0->content));  //qui nel buffer c'è "messaggio 0"
-
-
-  //potrei verificare che in seguito a una get, la put viene sbloccata
 }
 
 void test_finale_semafori_putbloccante_bufferpieno (void){
@@ -103,7 +101,7 @@ void test_produttoreunico_putnonbloccante_buffervuoto(void) {
   pthread_create (&thread_produttore,NULL,thread_function_produttore_nonbloccante, msg);
   pthread_join(thread_produttore,(void*)&ret_msg_0);  //<--- anche facendo la join il flusso non va in blocco perchè la funz non è bloccante
   //verifico che il flusso NON è in wait controllando il valore checkpoint; se è uguale a 1, vuol dire che il flusso non è in wait
-  sleep(5);
+  sleep(SUSPENSIONTIME);
   CU_ASSERT_EQUAL(checkpoint, 1);
   //il thread deve restituire null
   CU_ASSERT (NULL == ret_msg_0);

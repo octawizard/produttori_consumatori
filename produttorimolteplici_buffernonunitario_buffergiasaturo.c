@@ -5,7 +5,9 @@
   #include <pthread.h>
   #include <semaphore.h>
   #include "hwc1.c"
-  #include <stdio.h>  // for printf
+  #include <stdio.h>
+
+  #define SUSPENSIONTIME 3
 
   buffer_t* buffer;
   msg_t* msg_0;
@@ -74,7 +76,7 @@
     pthread_create (&thread0, NULL, thread_function_produttore_bloccante_0, msg_2);
     pthread_create (&thread1,NULL,thread_function_produttore_bloccante_1, msg_3);
     //verifico che la somma dei checkpoint valga sempre 0; i flussi sono in wait
-    sleep(3);
+    sleep(SUSPENSIONTIME);
     CU_ASSERT_EQUAL (checkpoint_0+checkpoint_1, 0);
     //inoltre verifico che il buffer sia intatto
     CU_ASSERT_STRING_EQUAL ( (char *)((buffer->buf)[0]).content, (char *)msg_0->content);

@@ -5,7 +5,9 @@
   #include <pthread.h>
   #include <semaphore.h>
   #include "hwc1.c"
-  #include <stdio.h>  // for printf
+  #include <stdio.h>
+
+  #define SUSPENSIONTIME 5
 
   buffer_t* buffer;
   int checkpoint = 0;
@@ -47,13 +49,11 @@
     CU_ASSERT (NULL == ((buffer->buf)[0]).content);
     //SOLLECITAZIONE: lancio il thread per leggere un messaggio da un buffer vuoto
     pthread_create (&thread_consumatore,NULL,thread_function_consumatore_bloccante, buffer);
-    sleep(5);   //aspetto un tempo ragionevole per assumere che il flusso o abbia terminato o sia in attesa
+    sleep(SUSPENSIONTIME);   //aspetto un tempo ragionevole per assumere che il flusso o abbia terminato o sia in attesa
     //verifico che il flusso è in wait controllando il valore checkpoint; se rimane zero, vuol dire che il flusso è ancora bloccato sulla get
     CU_ASSERT_EQUAL(checkpoint, 0);
     //inoltre verifico che il buffer sia ancora vuoto
     CU_ASSERT (NULL == ((buffer->buf)[0]).content);
-
-    //potrei verificare che in seguito a una put, la get viene sbloccata
   }
 
   void test_finale_semafori_getbloccante_buffervuoto (void){

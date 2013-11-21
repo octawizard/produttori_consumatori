@@ -5,7 +5,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "hwc1.c"
-#include <stdio.h>  // for printf
+#include <stdio.h>
 
 buffer_t* buffer;
 

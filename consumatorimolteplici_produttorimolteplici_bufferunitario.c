@@ -5,7 +5,9 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "hwc1.c"
-#include <stdio.h>  // for printf
+#include <stdio.h>
+
+#define SUSPENSIONTIME 5
 
 buffer_t* buffer;
 msg_t* msg_0;
@@ -165,7 +167,7 @@ void test_consumatorimolteplici_produttorimolteplici_nonbloccante_bufferunitario
   //l'obiettivo è simulare lo scenario in cui solo una delle due put e una delle due get vadano regolarmente a buon fine
   pthread_create (&threadP0, NULL, thread_function_produttore_nonbloccante_0, msg_0);
   pthread_create (&threadP1, NULL, thread_function_produttore_nonbloccante_1, msg_1);
-  sleep(5);   //forza le seq di interleaving
+  sleep(SUSPENSIONTIME);   //forza le seq di interleaving
   pthread_create (&threadC0, NULL, thread_function_consumatore_nonbloccante_0, NULL);
   pthread_create (&threadC1, NULL, thread_function_consumatore_nonbloccante_1, NULL);
   pthread_join(threadC0,(void*) &ret_msg_c0);

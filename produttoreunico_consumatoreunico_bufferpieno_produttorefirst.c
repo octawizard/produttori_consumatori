@@ -5,7 +5,9 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "hwc1.c"
-#include <stdio.h>  // for printf
+#include <stdio.h>
+
+#define SUSPENSIONTIME 3
 
 buffer_t* buffer;
 msg_t* msg_0;
@@ -61,7 +63,7 @@ void test_consumatoreunico_produttoreunico_putbloccante_getbloccante_bufferpieno
   CU_ASSERT_STRING_EQUAL (((char *)msg_1->content), "messaggio 1");
   //lancio la PUT per prima, poi la get
   pthread_create (&mythreadP, NULL, thread_function_produttore_bloccante, msg_1);
-  sleep(3);
+  sleep(SUSPENSIONTIME);
   //verifico che la put è in blocco
   CU_ASSERT_EQUAL (checkpoint, 0);
   pthread_create (&mythreadC,NULL,thread_function_consumatore_bloccante, NULL);
@@ -113,7 +115,7 @@ void test_consumatoreunico_produttoreunico_putnonbloccante_getnonbloccante_buffe
   CU_ASSERT_STRING_EQUAL (((char *)msg_1->content), "messaggio 1");
   //lancio la get per prima, poi la put
   pthread_create (&mythreadP, NULL, thread_function_produttore_nonbloccante, msg_1);
-  sleep(3);       // devo introdurlo per imporre la specifica del test "prima il produttore"
+  sleep(SUSPENSIONTIME);       // devo introdurlo per imporre la specifica del test "prima il produttore"
   pthread_create (&mythreadC,NULL,thread_function_consumatore_nonbloccante, NULL);
   pthread_join(mythreadP,(void*) &ret_msg_1);
   pthread_join(mythreadC,(void*) &ret_msg_0);

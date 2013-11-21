@@ -5,7 +5,9 @@
   #include <pthread.h>
   #include <semaphore.h>
   #include "hwc1.c"
-  #include <stdio.h>  // for printf
+  #include <stdio.h>
+
+  #define SUSPENSIONTIME 3
 
   buffer_t* buffer;
   msg_t* msg_0;
@@ -23,7 +25,9 @@
     return 0; 
   }
 
-  int clean_suite_produttorimolteplici_buffervuoto(void) { 
+  int clean_suite_produttorimolteplici_buffervuoto(void) {
+    /*msg_destroy_string(msg_0);
+    msg_destroy_string(msg_1);*/
     buffer_destroy(buffer);
     return 0; 
   }
@@ -64,7 +68,7 @@
     pthread_create (&thread0, NULL, thread_function_produttore_bloccante_0, msg_0);
     pthread_create (&thread1,NULL,thread_function_produttore_bloccante_1, msg_1);
     //verifico che la somma dei checkpoint valga sempre 1; ciò vuol dire che uno dei due flussi è ancora in wait
-    sleep(3); //do tempo ai due flussi di procedere, ma uno dei due rimarrà in blocco
+    sleep(SUSPENSIONTIME); //do tempo ai due flussi di procedere, ma uno dei due rimarrà in blocco
     CU_ASSERT_EQUAL (checkpoint_0+checkpoint_1, 1);
     //inoltre verifico di aver inserito nel buffer almeno uno dei due messaggi
     CU_ASSERT (NULL != ((buffer->buf)[0]).content);
@@ -75,7 +79,7 @@
       pthread_cancel(thread1);
     }
     if (checkpoint_1 == 1){
-      pthread_join(thread0, (void *)&ret_msg);
+      pthread_join(thread1, (void *)&ret_msg);
       CU_ASSERT_STRING_EQUAL (((char *)ret_msg->content), ((char *)msg_1->content));
       CU_ASSERT_STRING_EQUAL ((char *)(buffer->buf[0].content), ((char *)msg_1->content));
       pthread_cancel(thread0);
